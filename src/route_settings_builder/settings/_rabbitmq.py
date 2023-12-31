@@ -1,6 +1,5 @@
 from envparse import env
 
-
 RMQ_HOST = env.str('RMQ_HOST', default='localhost')
 RMQ_PORT = env.int('RMQ_PORT', default=5672)
 RMQ_PREFETCH_COUNT = env.int('RMQ_PREFETCH_COUNT', default=10)

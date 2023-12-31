@@ -1,31 +1,39 @@
-from typing import List, Optional
 import uuid
+from typing import List, Optional
 
 from asgiref.sync import sync_to_async
-
+from django.contrib import auth
 from django.shortcuts import render
+
 from ninja import NinjaAPI, Query, pagination, errors
-from ninja_apikey.security import APIKeyAuth
+from ninja.security import django_auth
 
 from route_settings_builder import models, schemas, filters, models_utils, gateways
 
-
-auth = APIKeyAuth()  # TODO: bearer token авторизация
-api = NinjaAPI(csrf=True, auth=auth)
-
-
-class AsyncAPIKeyAuth(APIKeyAuth):  # pylint: disable=too-few-public-methods
-    """ Асинхронная авторизация """
-
-    @sync_to_async
-    def authenticate(self, *args, **kwargs):
-        return super().authenticate(*args, **kwargs)
+api = NinjaAPI(auth=django_auth, urls_namespace='api')
 
 
 @api.get('/health', auth=None)
-def health_status(request):
+def get_health_status(request):
     """ Проверка состояния сервиса """
     return {'status': 'ok'}
+
+
+@api.post('/login/', auth=None, response={204: None, 400: None})
+def auth_user(request, payload: schemas.LoginSchema):
+    """ Авторизация пользователя """
+    request_data = payload.dict()
+
+    username = request_data['username']
+    password = request_data['password']
+
+    user = auth.authenticate(username=username, password=password)
+
+    if user is None:
+        return 400, None
+
+    auth.login(request, user)
+    return 204, None
 
 
 @api.get('/places', response={200: List[schemas.PlaceSchema]})
@@ -42,7 +50,7 @@ def get_place(request, place_id: int):
     """ Получение места """
     try:
         # TODO: Оптимизация запросов к БД
-        place = models.Place.objects.get(uuid=place_id)
+        place = models.Place.objects.get(id=place_id)
     except models.Place.DoesNotExist as ex:
         raise errors.HttpError(404, 'Место не найдено') from ex
 
@@ -72,6 +80,9 @@ def get_route(request, route_uuid: uuid.UUID):
     return _get_route(request, route_uuid, prefetch=('places', ))
 
 
+# TODO: django or ninja bug? POST, PUT, PATCH, DELETE {
+#     "detail": "CSRF check Failed"
+# }
 @api.post('/routes/', response=schemas.DetailedRouteSchema)
 def create_route(request, payload: schemas.CreateRouteSchema):
     """ Создание маршрута """
@@ -108,10 +119,9 @@ def partial_update_route(request, route_uuid: uuid.UUID, payload: schemas.Update
         raise errors.HttpError(400, str(ex)) from ex
 
 
-@api.delete('/routes/{route_uuid}/', response={204: None}, auth=AsyncAPIKeyAuth())
+@api.delete('/routes/{route_uuid}/', response={204: None})
 async def remove_route(request, route_uuid: uuid.UUID):
     """ Удаление маршрута """
-    await request.auth
     delete_count, _ = await models.Route.objects.filter(author=request.user, uuid=route_uuid).adelete()
 
     if not delete_count:
@@ -120,11 +130,9 @@ async def remove_route(request, route_uuid: uuid.UUID):
     return 204, None
 
 
-@api.post('/routes/{route_uuid}/build/', auth=AsyncAPIKeyAuth(), response={204: None})
+@api.post('/routes/{route_uuid}/build/', response={204: None})
 async def build_route(request, route_uuid: uuid.UUID):
     """ Запрос на строительство маршрута """
-    await request.auth
-
     try:
         route = await models.Route.objects.aget(author=request.user, uuid=route_uuid)
     except models.Route.DoesNotExist as ex:

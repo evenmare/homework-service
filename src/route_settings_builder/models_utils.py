@@ -51,7 +51,7 @@ def create_or_update_route(route_data: dict, route_uuid: Optional[uuid.UUID] = N
                 models.RoutePlace.objects.filter(place__id__in=remove_places_ids).delete()
 
     route.refresh_from_db()
-    setattr(route, 'is_draft', bool(route.details))
+    setattr(route, 'is_draft', not bool(route.details))
 
     return route
 
