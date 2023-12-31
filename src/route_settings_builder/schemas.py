@@ -6,6 +6,12 @@ from ninja import Schema, ModelSchema, Field
 from route_settings_builder import models
 
 
+class LoginSchema(Schema):
+    """ Схема для авторизации """
+    username: str
+    password: str
+
+
 class PlaceSchema(ModelSchema):
     """ Схема к сущности места """
     longitude: float
@@ -13,14 +19,15 @@ class PlaceSchema(ModelSchema):
 
     class Config:
         model = models.Place
-        model_fields = ('id', 'name', 'longitude', 'latitude', )
+        model_fields = ('id', 'name', 'longitude', 'latitude',)
 
 
 class CriterionSchema(ModelSchema):
     """ Схема к сущности критерия """
+
     class Config:
         model = models.Criterion
-        model_fields = ('id', 'internal_name', 'name', 'value_type', )
+        model_fields = ('id', 'internal_name', 'name', 'value_type',)
 
 
 class NestedCriterionSchema(Schema):
@@ -35,7 +42,7 @@ class DetailedPlaceSchema(PlaceSchema):
 
     class Config:
         model = models.Place
-        model_fields = ('id', 'name', 'longitude', 'latitude', )
+        model_fields = ('id', 'name', 'longitude', 'latitude', 'description',)
 
 
 class ListRouteSchema(ModelSchema):
@@ -44,7 +51,7 @@ class ListRouteSchema(ModelSchema):
 
     class Config:
         model = models.Route
-        model_fields = ('uuid', 'updated_at', 'name', )
+        model_fields = ('uuid', 'updated_at', 'name',)
 
 
 class DetailedRouteSchema(ListRouteSchema):
@@ -55,15 +62,17 @@ class DetailedRouteSchema(ListRouteSchema):
 
     class Config:
         model = models.Route
-        model_fields = ('uuid', 'updated_at', 'name', 'details', 'places', )
+        model_fields = ('uuid', 'updated_at', 'name', 'details', 'places',)
 
 
 class NestedSaveRouteCriterionSchema(Schema):
+    """ Схема для создания связи критерий – маршрут """
     criterion_id: int
     value: str
 
 
 class UpdateRouteSchema(Schema):
+    """ Схема обновления маршрута """
     name: Optional[str]
     guide_description: Optional[str]
     criteria: Optional[List[NestedSaveRouteCriterionSchema]]
@@ -71,5 +80,6 @@ class UpdateRouteSchema(Schema):
 
 
 class CreateRouteSchema(UpdateRouteSchema):
+    """ Схема создания маршрута """
     name: str
     places: List[int]

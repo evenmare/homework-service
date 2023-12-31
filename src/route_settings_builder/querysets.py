@@ -8,6 +8,5 @@ class RouteQuerySet(models.QuerySet):
         Добавление поля is_draft в запрос
         :return: QuerySet
         """
-        return self.annotate(is_draft=models.Case(models.When(details=None, then=True),
-                                                  models.When(details={}, then=True),
+        return self.annotate(is_draft=models.Case(models.When(details__isnull=True, then=True),
                                                   default=False))

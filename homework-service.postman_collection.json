@@ -1,0 +1,254 @@
+{
+	"info": {
+		"_postman_id": "40643270-7363-4dc6-ae92-86d78d4a2262",
+		"name": "homework-service",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "18011636"
+	},
+	"item": [
+		{
+			"name": "GET places",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/places",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000{{REQUEST_PREFIX}}",
+					"path": [
+						"api",
+						"v1",
+						"places"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET place",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/places/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000{{REQUEST_PREFIX}}",
+					"path": [
+						"api",
+						"v1",
+						"places",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET criteria",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/criteria",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000{{REQUEST_PREFIX}}",
+					"path": [
+						"api",
+						"v1",
+						"criteria"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET routes",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/routes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000{{REQUEST_PREFIX}}",
+					"path": [
+						"api",
+						"v1",
+						"routes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET route",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/routes/009a4934-d4ba-4a51-bb30-74737ec2dba7",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000{{REQUEST_PREFIX}}",
+					"path": [
+						"api",
+						"v1",
+						"routes",
+						"009a4934-d4ba-4a51-bb30-74737ec2dba7"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "POST route",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"some example\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/routes/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000{{REQUEST_PREFIX}}",
+					"path": [
+						"api",
+						"v1",
+						"routes",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "PUT route",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"some example\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/routes/1/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000{{REQUEST_PREFIX}}",
+					"path": [
+						"api",
+						"v1",
+						"routes",
+						"1",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "POST login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"{{USERNAME}}\",\n    \"password\": \"{{PASSWORD}}\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/login/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000{{REQUEST_PREFIX}}",
+					"path": [
+						"api",
+						"v1",
+						"login",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DELETE route",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/routes/1/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000{{REQUEST_PREFIX}}",
+					"path": [
+						"api",
+						"v1",
+						"routes",
+						"1",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"USERNAME = pm.environment.get(\"USERNAME\");",
+					"PASSWORD = pm.environment.get(\"PASSWORD\");",
+					"",
+					"url = 'http://localhost:8000' + pm.environment.get(\"REQUEST_PREFIX\") + '/api/v1/login/'",
+					"pm.sendRequest({",
+					"    url: url,",
+					"    method: 'POST',",
+					"    body: {",
+					"        mode: \"application/json\",",
+					"        raw: JSON.stringify({\"username\": USERNAME, \"password\": PASSWORD}),",
+					"    }",
+					"});",
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"pm.test(\"Response code is 200, 201, or 204\", function () {",
+					"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204])",
+					"});",
+					""
+				]
+			}
+		}
+	]
+}

@@ -1,4 +1,3 @@
-import decimal
 from typing import List, Tuple, Optional, Set
 
 import pytest
@@ -7,9 +6,7 @@ from django.contrib.auth.models import AbstractUser
 
 from route_settings_builder import models, models_utils
 
-
 M2M_COUNT = 3
-
 
 pytestmark = [pytest.mark.django_db]
 

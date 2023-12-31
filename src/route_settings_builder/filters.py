@@ -1,6 +1,6 @@
 # pylint: disable=abstract-method,missing-class-docstring,too-few-public-methods
 from typing import Optional, List
-import uuid
+from uuid import UUID
 
 from django.db.models import Q
 from ninja import FilterSchema, Field
@@ -8,13 +8,13 @@ from ninja import FilterSchema, Field
 
 class PlaceFilterSchema(FilterSchema):
     """ Схема фильтров для списка мест """
-    name: Optional[str]
-    longitude__gte: Optional[float]
-    longitude__lte: Optional[float]
-    latitude__gte: Optional[float]
-    latitude__lte: Optional[float]
-    criteria: Optional[List[str]]
-    id__in: Optional[List[int]]
+    name: Optional[str] = None
+    longitude__gte: Optional[float] = None
+    longitude__lte: Optional[float] = None
+    latitude__gte: Optional[float] = None
+    latitude__lte: Optional[float] = None
+    criteria: Optional[List[str]] = None
+    id__in: Optional[List[int]] = None
 
     @staticmethod
     def filter_criteria(value: Optional[List[str]]) -> Q:
@@ -25,27 +25,27 @@ class PlaceFilterSchema(FilterSchema):
         """
         return _filter_by_criteria('placecriterion__value', value)
 
-    class Config:
+    class Meta:
         expression_connector = 'AND'
 
 
 class CriterionFilterSchema(FilterSchema):
     """" Схема фильтров для перечня критериев """
-    name: Optional[str] = Field(q='name__icontains')
-    internal_name: Optional[str] = Field(q='internal_name__icontains')
-    value_type: Optional[str]
+    name: Optional[str] = Field(None, q='name__icontains')
+    internal_name: Optional[str] = Field(None, q='internal_name__icontains')
+    value_type: Optional[str] = None
 
-    class Config:
+    class Meta:
         expression_connector = 'AND'
 
 
 class RouteFilterSchema(FilterSchema):
     """ Схема фильтров для списка маршрутов """
-    uuid: Optional[uuid.UUID]
-    name: Optional[str] = Field(q='name__icontains')
+    uuid: Optional[UUID] = None
+    name: Optional[str] = Field(None, q='name__icontains')
     is_draft: Optional[bool] = None
-    criteria: Optional[List[str]]
-    id__in: Optional[List[int]]
+    criteria: Optional[List[str]] = None
+    id__in: Optional[List[int]] = None
 
     @staticmethod
     def filter_criteria(value: Optional[List[str]]) -> Q:
@@ -56,7 +56,7 @@ class RouteFilterSchema(FilterSchema):
         """
         return _filter_by_criteria('routecriterion__value', value)
 
-    class Config:
+    class Meta:
         expression_connector = 'AND'
 
 

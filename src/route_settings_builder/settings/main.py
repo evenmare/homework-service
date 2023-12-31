@@ -1,4 +1,5 @@
 from pathlib import Path
+from envparse import env
 from dotenv import load_dotenv
 
 from split_settings.tools import include
@@ -8,6 +9,7 @@ load_dotenv()
 include(
     '_database.py',
     '_rabbitmq.py',
+    '_git.py',
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -17,7 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-17yom&(1$lx6oqg61e5@_yhx2-i@ko*zzho+hgsapgb(c84u4@'
+SECRET_KEY = env.str('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -38,7 +40,6 @@ REQUIRED_APPS = [
     'django.contrib.staticfiles',
 
     'ckeditor',
-    'ninja_apikey',
 ]
 
 PROJECT_APPS = [
@@ -62,7 +63,7 @@ ROOT_URLCONF = 'route_settings_builder.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -121,23 +122,22 @@ STATIC_ROOT = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGGING = {
-    'version': 1,
-    'filters': {
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
-        }
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
     },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'filters': ['require_debug_true'],
-            'class': 'logging.StreamHandler',
-        }
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
     },
-    'loggers': {
-        'django.db.backends': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-        }
-    }
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": env.str("DJANGO_LOG_LEVEL", default="INFO"),
+            "propagate": False,
+        },
+    },
 }
