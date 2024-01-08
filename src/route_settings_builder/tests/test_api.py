@@ -1,14 +1,18 @@
 import uuid
+import json
 
 import pytest
 
+from asgiref.sync import sync_to_async
+
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.test import Client
+from django.test import Client, AsyncClient
 
 from route_settings_builder import models
 
 api_client = Client()
+async_api_client = AsyncClient()
 
 pytestmark = pytest.mark.django_db
 
@@ -201,7 +205,8 @@ def test_get_route(auth_credentials):
                 'longitude': float(place.longitude),
                 'latitude': float(place.latitude),
             }
-        ]
+        ],
+        'guide_description': None,
     }
 
 
@@ -215,11 +220,175 @@ def test_get_route__not_found(auth_credentials):
 
 def test_get_route__created_by_other_user(auth_credentials):
     """ GET /api/v1/routes/<:route_uuid> by other user """
+    assert api_client.login(**auth_credentials)
+
     user = get_user_model().objects.create(username='fake-2')
     route = models.Route.objects.create(name='Детализация маршрут', author=user, details={'details': 'info'})
 
     response = api_client.get(reverse('api:get_route', kwargs={'route_uuid': route.uuid}))
-    assert response.status_code == 401
+    assert response.status_code == 404
 
-# TODO: test_create_route, test_update_route, test_partial_route, test_remove_route
-# TODO: test_build_route(integration, not integration), test_route_guide
+
+def test_create_route(auth_credentials, name: str = 'test route'):
+    """ POST /api/v1/routes/ """
+    assert api_client.login(**auth_credentials)
+
+    criteria = [models.Criterion(internal_name=f'specific_{i}', name=f'Для маршрута {i}')
+                for i in range(3)]
+    criteria = models.Criterion.objects.bulk_create(criteria)
+
+    place = models.Place.objects.create(name='Место для маршрута', longitude=30.5, latitude=20.4)
+
+    request_data = {
+        'name': name,
+        'guide_description': 'some desc',
+        'criteria': [
+            {'criterion_id': criterion.id, 'value': str(i)} for i, criterion in enumerate(criteria)
+        ],
+        'places': [place.id],
+    }
+
+    response = api_client.post(reverse('api:create_route'), json.dumps(request_data),
+                               content_type='application/json')
+    assert response.status_code == 201
+
+    response_json = response.json()
+    route_id = response_json.pop('uuid')
+    response_json.pop('updated_at')
+
+    assert response_json == {
+        'is_draft': True,
+        'name': name,
+        'guide_description': 'some desc',
+        'criteria': [
+            {
+                'criterion': {
+                    'id': criterion.id,
+                    'internal_name': f'specific_{i}',
+                    'name': f'Для маршрута {i}',
+                    'value_type': 'string',
+                },
+                'value': str(i),
+            } for i, criterion in enumerate(criteria)
+        ],
+        'details': None,
+        'places': [
+            {
+                'longitude': place.longitude,
+                'latitude': place.latitude,
+                'id': place.id,
+                'name': place.name,
+            }
+        ]
+    }
+
+    route = models.Route.objects.get(uuid=route_id)
+    assert set(route.places.all()) == {place}
+    assert set(route.criteria.all()) == set(criteria)
+
+
+def test_update_route(auth_credentials):
+    """ PUT /api/v1/routes/{id}/ """
+    assert api_client.login(**auth_credentials)
+
+    route_name = 'updatable route'
+    test_create_route(auth_credentials, route_name)
+
+    route = models.Route.objects.get(name=route_name)
+
+    new_criterion = models.Criterion.objects.create(name='Критерий для обновления', internal_name='for_update')
+    new_place = models.Place.objects.create(name='Место для обновления', longitude=87, latitude=78)
+
+    request_data = {
+        'name': 'new name for route',
+        'guide_description': 'new desc',
+        'criteria': [{
+            'criterion_id': new_criterion.id,
+            'value': 'new value',
+        }],
+        'places': [new_place.id]
+    }
+
+    response = api_client.put(reverse('api:update_route', kwargs={'route_uuid': str(route.uuid)}),
+                              json.dumps(request_data), content_type='application/json')
+    assert response.status_code == 200
+
+    response_json = response.json()
+    response_json.pop('updated_at')
+
+    assert response_json == {
+        'uuid': str(route.uuid),
+        'is_draft': True,
+        'name': request_data['name'],
+        'guide_description': request_data['guide_description'],
+        'criteria': [
+            {
+                'criterion': {
+                    'id': new_criterion.id,
+                    'internal_name': new_criterion.internal_name,
+                    'name': new_criterion.name,
+                    'value_type': 'string',
+                },
+                'value': 'new value',
+            },
+        ],
+        'details': None,
+        'places': [
+            {
+                'longitude': new_place.longitude,
+                'latitude': new_place.latitude,
+                'id': new_place.id,
+                'name': new_place.name,
+            }
+        ]
+    }
+
+    assert set(route.places.all()) == {new_place}
+    assert set(route.criteria.all()) == {new_criterion}
+
+
+def test_partial_update(auth_credentials):
+    """ PATCH /api/v1/routes/{id}/ """
+    assert api_client.login(**auth_credentials)
+
+    route_name = 'partial updatable route'
+    test_create_route(auth_credentials, route_name)
+
+    route = models.Route.objects.get(name=route_name)
+
+    request_data = {
+        'name': 'new route name',
+    }
+
+    response = api_client.patch(reverse('api:partial_update_route', kwargs={'route_uuid': str(route.uuid)}),
+                                json.dumps(request_data), content_type='application/json')
+    assert response.status_code == 200
+
+    response_json = response.json()
+    response_json.pop('updated_at')
+
+    assert len(response_json.pop('criteria')) == 3
+    assert len(response_json.pop('places')) == 1
+
+    assert response_json == {
+        'uuid': str(route.uuid),
+        'is_draft': True,
+        'name': 'new route name',
+        'guide_description': 'some desc',
+        'details': None,
+    }
+
+
+async def test_remove_route(async_auth_credentials):
+    """ DELETE /api/v1/routes/{route_id}/ """
+    assert await sync_to_async(async_api_client.login)(**async_auth_credentials)
+
+    route_name = 'remove route'
+    await sync_to_async(test_create_route)(async_auth_credentials, route_name)
+
+    route_uuid = (await models.Route.objects.aget(name=route_name)).uuid
+
+    response = await async_api_client.delete(reverse('api:remove_route', kwargs={'route_uuid': route_uuid}))
+    assert response.status_code == 204
+
+    assert (await sync_to_async(models.Route.objects.filter(uuid=route_uuid).first)()) is None

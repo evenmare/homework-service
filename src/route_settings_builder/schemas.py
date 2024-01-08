@@ -12,6 +12,12 @@ class LoginSchema(Schema):
     password: str
 
 
+class LoginResponseSchema(Schema):
+    """ Схема для ответа на авторизацию """
+    success: bool
+    message: str
+
+
 class PlaceSchema(ModelSchema):
     """ Схема к сущности места """
     longitude: float
@@ -59,10 +65,11 @@ class DetailedRouteSchema(ListRouteSchema):
     criteria: List[NestedCriterionSchema] = Field([], alias='routecriterion_set')
     details: Optional[dict]
     places: List[PlaceSchema]
+    guide_description: Optional[str]
 
     class Config:
         model = models.Route
-        model_fields = ('uuid', 'updated_at', 'name', 'details', 'places',)
+        model_fields = ('uuid', 'updated_at', 'name', 'details', 'places', 'guide_description',)
 
 
 class NestedSaveRouteCriterionSchema(Schema):
@@ -73,13 +80,18 @@ class NestedSaveRouteCriterionSchema(Schema):
 
 class UpdateRouteSchema(Schema):
     """ Схема обновления маршрута """
-    name: Optional[str]
-    guide_description: Optional[str]
-    criteria: Optional[List[NestedSaveRouteCriterionSchema]]
-    places: Optional[List[int]]
+    name: str
+    guide_description: Optional[str] = None
+    criteria: Optional[List[NestedSaveRouteCriterionSchema]] = []
+    places: Optional[List[int]] = []
+
+
+class PartialUpdateRouteSchema(UpdateRouteSchema):
+    """ Схема частичного обновления маршрута """
+    name: Optional[str] = None
 
 
 class CreateRouteSchema(UpdateRouteSchema):
     """ Схема создания маршрута """
     name: str
-    places: List[int]
+    places: Optional[List[int]] = []

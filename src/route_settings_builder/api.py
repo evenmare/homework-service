@@ -2,15 +2,19 @@ import uuid
 from typing import List, Optional
 
 from asgiref.sync import sync_to_async
-from django.contrib import auth
+
 from django.shortcuts import render
+from django.contrib import auth
 
 from ninja import NinjaAPI, Query, pagination, errors
 from ninja.security import django_auth
 
-from route_settings_builder import models, schemas, filters, models_utils, gateways
+from route_settings_builder import models, schemas, filters, models_utils, gateways, security
 
-api = NinjaAPI(auth=django_auth, urls_namespace='api')
+SYNC_AUTH = [security.HttpBasicDjangoAuth(), django_auth]
+ASYNC_AUTH = [security.AsyncHttpBasicDjangoAuth(), django_auth]
+
+api = NinjaAPI(auth=SYNC_AUTH, urls_namespace='api')
 
 
 @api.get('/health', auth=None)
@@ -19,21 +23,18 @@ def get_health_status(request):
     return {'status': 'ok'}
 
 
-@api.post('/login/', auth=None, response={204: None, 400: None})
-def auth_user(request, payload: schemas.LoginSchema):
+@api.post('/login/', auth=None, response={200: schemas.LoginResponseSchema, 400: schemas.LoginResponseSchema})
+def login(request, payload: schemas.LoginSchema):
     """ Авторизация пользователя """
-    request_data = payload.dict()
-
-    username = request_data['username']
-    password = request_data['password']
-
-    user = auth.authenticate(username=username, password=password)
-
-    if user is None:
-        return 400, None
-
-    auth.login(request, user)
-    return 204, None
+    user = auth.authenticate(request, username=payload.username, password=payload.password)
+    if user is not None:
+        if user.is_active:
+            auth.login(request, user)
+            return {"success": True, "message": "User successfully authenticated"}
+        else:
+            return 400, {"success": False, "message": "User account is disabled"}
+    else:
+        return 400, {"success": False, "message": "Username or password is incorrect"}
 
 
 @api.get('/places', response={200: List[schemas.PlaceSchema]})
@@ -69,7 +70,7 @@ def get_criteria(request, request_filters: filters.CriterionFilterSchema = Query
 @pagination.paginate()
 def get_routes(request, request_filters: filters.RouteFilterSchema = Query(...)):
     """ Получение перечня мест """
-    routes = models.Route.objects.filter(author=request.user).add_is_draft_field().all()
+    routes = models.Route.objects.filter(author=request.auth).add_is_draft_field().all()
     routes = request_filters.filter(routes)
     return routes
 
@@ -80,14 +81,11 @@ def get_route(request, route_uuid: uuid.UUID):
     return _get_route(request, route_uuid, prefetch=('places', ))
 
 
-# TODO: django or ninja bug? POST, PUT, PATCH, DELETE {
-#     "detail": "CSRF check Failed"
-# }
-@api.post('/routes/', response=schemas.DetailedRouteSchema)
+@api.post('/routes/', response={201: schemas.DetailedRouteSchema})
 def create_route(request, payload: schemas.CreateRouteSchema):
     """ Создание маршрута """
     try:
-        return _operate_route(request, payload.dict())
+        return 201, _operate_route(request, payload.dict())
     except Exception as ex:
         raise errors.HttpError(400, str(ex)) from ex
 
@@ -109,7 +107,7 @@ def update_route(request, route_uuid: uuid.UUID, payload: schemas.CreateRouteSch
 
 
 @api.patch('/routes/{route_uuid}/', response=schemas.DetailedRouteSchema)
-def partial_update_route(request, route_uuid: uuid.UUID, payload: schemas.UpdateRouteSchema):
+def partial_update_route(request, route_uuid: uuid.UUID, payload: schemas.PartialUpdateRouteSchema):
     """ Частичное обновление маршрута """
     try:
         return _operate_route(request, payload.dict(exclude_unset=True), route_uuid)
@@ -119,10 +117,10 @@ def partial_update_route(request, route_uuid: uuid.UUID, payload: schemas.Update
         raise errors.HttpError(400, str(ex)) from ex
 
 
-@api.delete('/routes/{route_uuid}/', response={204: None})
+@api.delete('/routes/{route_uuid}/', auth=ASYNC_AUTH, response={204: None})
 async def remove_route(request, route_uuid: uuid.UUID):
     """ Удаление маршрута """
-    delete_count, _ = await models.Route.objects.filter(author=request.user, uuid=route_uuid).adelete()
+    delete_count, _ = await models.Route.objects.filter(author=request.auth, uuid=route_uuid).adelete()
 
     if not delete_count:
         raise errors.HttpError(404, 'Маршрут не найден')
@@ -130,11 +128,11 @@ async def remove_route(request, route_uuid: uuid.UUID):
     return 204, None
 
 
-@api.post('/routes/{route_uuid}/build/', response={204: None})
+@api.post('/routes/{route_uuid}/build/', auth=ASYNC_AUTH, response={204: None})
 async def build_route(request, route_uuid: uuid.UUID):
     """ Запрос на строительство маршрута """
     try:
-        route = await models.Route.objects.aget(author=request.user, uuid=route_uuid)
+        route = await models.Route.objects.aget(author=request.auth, uuid=route_uuid)
     except models.Route.DoesNotExist as ex:
         raise errors.HttpError(404, 'Маршрут не найден') from ex
 
@@ -169,7 +167,7 @@ def _operate_route(request, route_data: dict, *args):
     :param args: аргументы обновления
     :return: маршрут
     """
-    route_data['author'] = request.user
+    route_data['author'] = request.auth
     return models_utils.create_or_update_route(route_data, *args)
 
 
@@ -180,7 +178,7 @@ def _get_route(request, route_uuid: uuid.UUID, add_draft_field: Optional[bool] =
     :param route_uuid: значение uuid маршрута
     :return: маршрут
     """
-    base_query = models.Route.objects.filter(author=request.user)
+    base_query = models.Route.objects.filter(author=request.auth)
 
     if add_draft_field:
         base_query = base_query.add_is_draft_field()
