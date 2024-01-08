@@ -1,11 +1,10 @@
 import pytest
 
+from asgiref.sync import sync_to_async
 from django.contrib.auth import get_user_model
 
 
-@pytest.fixture()
-def auth_credentials():
-    """ Создание пользователя для авторизации """
+def _get_credentials():
     username = 'user'
     password = 'S0meVeryHardPASSWORD.'
 
@@ -15,4 +14,16 @@ def auth_credentials():
         user.set_password(password)
         user.save()
 
-    yield {'username': username, 'password': password}
+    return {'username': username, 'password': password}
+
+
+@pytest.fixture()
+def auth_credentials():
+    """ Создание пользователя для авторизации """
+    yield _get_credentials()
+
+
+@pytest.fixture()
+async def async_auth_credentials():
+    """ Асинхронное создание пользователя для авторизации """
+    yield await sync_to_async(_get_credentials)()

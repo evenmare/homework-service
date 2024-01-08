@@ -149,7 +149,7 @@
 					"raw": "{\n    \"name\": \"some example\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/routes/1/",
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/routes/009a4934-d4ba-4a51-bb30-74737ec2dba7/",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -159,7 +159,34 @@
 						"api",
 						"v1",
 						"routes",
-						"1",
+						"009a4934-d4ba-4a51-bb30-74737ec2dba7",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "PATCH route",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"some example\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/routes/009a4934-d4ba-4a51-bb30-74737ec2dba7/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000{{REQUEST_PREFIX}}",
+					"path": [
+						"api",
+						"v1",
+						"routes",
+						"009a4934-d4ba-4a51-bb30-74737ec2dba7",
 						""
 					]
 				}
@@ -194,11 +221,24 @@
 		},
 		{
 			"name": "DELETE route",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Response status code is 200, 201, or 204\", function () {",
+							"  pm.expect([200, 201, 204]).to.include(pm.response.code);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "DELETE",
 				"header": [],
 				"url": {
-					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/routes/1/",
+					"raw": "http://localhost:8000{{REQUEST_PREFIX}}/api/v1/routes/009a4934-d4ba-4a51-bb30-74737ec2dba7/",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -208,7 +248,7 @@
 						"api",
 						"v1",
 						"routes",
-						"1",
+						"009a4934-d4ba-4a51-bb30-74737ec2dba7",
 						""
 					]
 				}
@@ -216,6 +256,21 @@
 			"response": []
 		}
 	],
+	"auth": {
+		"type": "basic",
+		"basic": [
+			{
+				"key": "password",
+				"value": "{{PASSWORD}}",
+				"type": "string"
+			},
+			{
+				"key": "username",
+				"value": "{{USERNAME}}",
+				"type": "string"
+			}
+		]
+	},
 	"event": [
 		{
 			"listen": "prerequest",
